@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\APBD_HW_07.Domain\APBD_HW_07.Domain.csproj" />
+    </ItemGroup>
+
 </Project>
