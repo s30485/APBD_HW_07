@@ -4,7 +4,6 @@
     {
         Task<IEnumerable<ShortDeviceDto>> GetAllAsync();
         Task<DeviceDto?> GetByIdAsync(string id);
-        Task CreateAsync(string csvLine);
         Task CreateAsync(DeviceDto device);
         Task<bool> UpdateAsync(string id, DeviceDto device);
         Task<bool> DeleteAsync(string id);

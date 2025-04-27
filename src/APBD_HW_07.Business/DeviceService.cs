@@ -17,16 +17,44 @@
 
         public async Task<DeviceDto> CreateFromJsonAsync(CreateUpdateDeviceDto dto)
         {
-            var id = $"{dto.Type}-{Guid.NewGuid():N}".Substring(0, 8);
-            var d  = new DeviceDto(
-                id, dto.Name, dto.IsEnabled,
+            //determine prefix and load all existing short IDs
+            var prefix = dto.Type.ToUpperInvariant();
+            var all = await _repo.GetAllAsync(); //returns ShortDeviceDto with Id like "SW-1", "P-2", etc.
+
+            //extract integer suffixes for this prefix
+            var maxSuffix = all
+                .Select(d => d.Id)
+                .Where(id => id.StartsWith(prefix + "-"))
+                .Select(id =>
+                {
+                    var parts = id.Split('-');
+                    return parts.Length == 2 && int.TryParse(parts[1], out var n) 
+                        ? n 
+                        : 0;
+                })
+                .DefaultIfEmpty(0)
+                .Max();
+
+            //assign next ID: e.g. "SW-3" if the max was 2
+            var nextSuffix = maxSuffix + 1;
+            var newId = $"{prefix}-{nextSuffix}";
+
+            //build the full DTO
+            var d = new DeviceDto(
+                newId,
+                dto.Name,
+                dto.IsEnabled,
                 dto.BatteryPercentage,
                 dto.OperatingSystem,
                 dto.IpAddress,
                 dto.NetworkName
             );
+
+            //persist via ADO.NET
             await _repo.CreateAsync(d);
-            return (await _repo.GetByIdAsync(id))!;
+
+            //read it back and return
+            return (await _repo.GetByIdAsync(newId))!;
         }
 
         public Task<bool> UpdateAsync(string id, CreateUpdateDeviceDto dto)
@@ -59,7 +87,7 @@
                      : rawId.StartsWith("ED-") ? "ED"
                      : throw new ArgumentException($"Unknown prefix in ID '{rawId}'.");
 
-            bool isEnabled = bool.Parse(parts[2]);
+            int isEnabled = int.Parse(parts[2]);
             DeviceDto dto = type switch
             {
                 "SW" => new DeviceDto(rawId, parts[1], isEnabled,

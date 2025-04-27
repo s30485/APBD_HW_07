@@ -1,10 +1,10 @@
 ﻿namespace APBD_HW_07.Business
 {
-    public record ShortDeviceDto(string Id, string Name, bool IsEnabled);
+    public record ShortDeviceDto(string Id, string Name, int IsEnabled);
     public record DeviceDto(
         string Id,
         string Name,
-        bool IsEnabled,
+        int IsEnabled,
         int? BatteryPercentage,
         string? OperatingSystem,
         string? IpAddress,
@@ -13,7 +13,7 @@
     public record CreateUpdateDeviceDto(
         string Type,
         string Name,
-        bool IsEnabled,
+        int IsEnabled,
         int? BatteryPercentage,
         string? OperatingSystem,
         string? IpAddress,
