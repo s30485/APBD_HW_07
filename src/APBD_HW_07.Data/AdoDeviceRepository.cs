@@ -25,8 +25,8 @@ namespace APBD_HW_07.Data
             while (await rdr.ReadAsync())
             {
                 list.Add(new ShortDeviceDto(
-                    rdr.GetString(0),      // Id
-                    rdr.GetString(1),      // Name
+                    rdr.GetString(0), //id
+                    rdr.GetString(1), //name
                     rdr.GetInt32(2)
                 ));
             }
@@ -60,13 +60,13 @@ WHERE d.Id = @Id";
             if (!await rdr.ReadAsync()) return null;
 
             return new DeviceDto(
-                rdr.GetString(0),                  // Id
-                rdr.GetString(1),                  // Name
-                rdr.GetInt32(2),                 // IsEnabled
-                rdr.IsDBNull(3) ? null : rdr.GetInt32(3),     // BatteryPercentage
-                rdr.IsDBNull(4) ? null : rdr.GetString(4),    // OperatingSystem
-                rdr.IsDBNull(5) ? null : rdr.GetString(5),    // IpAddress
-                rdr.IsDBNull(6) ? null : rdr.GetString(6)     // NetworkName
+                rdr.GetString(0), //id
+                rdr.GetString(1), //name
+                rdr.GetInt32(2), // IsEnabled
+                rdr.IsDBNull(3) ? null : rdr.GetInt32(3), // BatteryPercentage
+                rdr.IsDBNull(4) ? null : rdr.GetString(4), // OperatingSystem
+                rdr.IsDBNull(5) ? null : rdr.GetString(5), // IpAddress
+                rdr.IsDBNull(6) ? null : rdr.GetString(6) // NetworkName
             );
         }
 

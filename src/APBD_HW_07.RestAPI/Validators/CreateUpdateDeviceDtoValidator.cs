@@ -20,10 +20,10 @@ namespace APBD_HW_07.RestAPI.Validators
             var results = new List<ValidationResult>();
             var ctx = new ValidationContext(dto, null, null);
 
-            // 1) DataAnnotations check
+            //dataAnnotations check
             Validator.TryValidateObject(dto, ctx, results, validateAllProperties: true);
 
-            // 2) Type must be one of SW, P, ED
+            //type must be one of SW, P, ED
             if (!AllowedTypes.Contains(dto.Type?.ToUpperInvariant() ?? ""))
             {
                 results.Add(new ValidationResult(
@@ -31,8 +31,8 @@ namespace APBD_HW_07.RestAPI.Validators
                     new[] { nameof(dto.Type) }));
             }
 
-            // 3) Domain‐level sanity check
-            //    We can try to construct a dummy domain object to catch its exceptions:
+            //domain‐level sanity check
+            //construct a dummy domain object to catch its exceptions:
             try
             {
                 Device dummy = dto.Type switch
@@ -51,7 +51,6 @@ namespace APBD_HW_07.RestAPI.Validators
             }
             catch (EmptyBatteryException ebe)
             {
-                // unlikely at creation, but just in case
                 results.Add(new ValidationResult(ebe.Message, new[] { nameof(dto.BatteryPercentage) }));
             }
             catch (EmptySystemException ese)
