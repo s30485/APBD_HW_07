@@ -52,6 +52,17 @@ namespace APBD_HW_07.RestAPI.Controllers
             var created = await _svc.CreateFromJsonAsync(payload);
             return Results.Created($"/api/devices/{created.Id}", created);
         }
+        
+        /// <summary>
+        /// PUT /api/devices/{id}
+        /// Updates an existing device by ID.
+        /// </summary>
+        [HttpPut("{id}")]
+        [Consumes("application/json")]
+        public async Task<IResult> Update(string id, [FromBody] CreateUpdateDeviceDto dto)
+            => await _svc.UpdateAsync(id, dto)
+                ? Results.NoContent()
+                : Results.NotFound();
 
         /// <summary>
         /// POST /api/devices
@@ -79,17 +90,6 @@ namespace APBD_HW_07.RestAPI.Controllers
             }
             return Results.Ok(created);
         }
-
-        /// <summary>
-        /// PUT /api/devices/{id}
-        /// Updates an existing device by ID.
-        /// </summary>
-        [HttpPut("{id}")]
-        [Consumes("application/json")]
-        public async Task<IResult> Update(string id, [FromBody] CreateUpdateDeviceDto dto)
-            => await _svc.UpdateAsync(id, dto)
-                ? Results.NoContent()
-                : Results.NotFound();
 
         /// <summary>
         /// DELETE /api/devices/{id}

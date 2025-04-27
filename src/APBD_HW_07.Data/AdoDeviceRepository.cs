@@ -165,40 +165,113 @@ VALUES (@Id, @IP, @Network, @DeviceId)", conn, tran))
 
         public async Task<bool> UpdateAsync(string id, DeviceDto d)
         {
-            const string sql = @"UPDATE Device SET 
-                  Name=@Name, 
-                  IsEnabled=@IsEnabled,
-                  BatteryPercentage=@Battery,
-                  OperatingSystem=@OS,
-                  IpAddress=@IP, 
-                  NetworkName=@Network
-                  WHERE Id=@Id";
-
-            using var conn = new SqlConnection(_conn);
-            using var cmd  = new SqlCommand(sql, conn);
-
-            cmd.Parameters.AddWithValue("@Id",        id);
-            cmd.Parameters.AddWithValue("@Name",      d.Name);
-            cmd.Parameters.AddWithValue("@IsEnabled", d.IsEnabled);                   // bool
-            cmd.Parameters.AddWithValue("@Battery",   (object?)d.BatteryPercentage ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@OS",        (object?)d.OperatingSystem   ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@IP",        (object?)d.IpAddress         ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Network",   (object?)d.NetworkName       ?? DBNull.Value);
-
+            await using var conn = new SqlConnection(_conn);
             await conn.OpenAsync();
-            return await cmd.ExecuteNonQueryAsync() > 0;
+            await using var tran = conn.BeginTransaction();
+            try
+            {
+                //update base Device
+                var baseCmd = new SqlCommand(@"
+UPDATE Device
+   SET Name = @Name,
+       IsEnabled = @IsEnabled
+ WHERE Id = @Id", conn, tran);
+                baseCmd.Parameters.AddWithValue("@Id",        id);
+                baseCmd.Parameters.AddWithValue("@Name",      d.Name);
+                baseCmd.Parameters.AddWithValue("@IsEnabled", d.IsEnabled);
+                var rows = await baseCmd.ExecuteNonQueryAsync();
+                if (rows == 0)
+                {
+                    await tran.RollbackAsync();
+                    return false;
+                }
+
+                //update subtype
+                var prefix = id.Substring(0,2).ToUpperInvariant();
+                if (prefix == "SW")
+                {
+                    var swCmd = new SqlCommand(@"
+UPDATE Smartwatch
+   SET BatteryPercentage = @Battery
+ WHERE DeviceId = @DeviceId", conn, tran);
+                    swCmd.Parameters.AddWithValue("@Battery",   d.BatteryPercentage ?? 0);
+                    swCmd.Parameters.AddWithValue("@DeviceId",  id);
+                    await swCmd.ExecuteNonQueryAsync();
+                }
+                else if (prefix == "P-")
+                {
+                    var pcCmd = new SqlCommand(@"
+UPDATE PersonalComputer
+   SET OperationSystem = @OS
+ WHERE DeviceId = @DeviceId", conn, tran);
+                    pcCmd.Parameters.AddWithValue("@OS",        d.OperatingSystem ?? string.Empty);
+                    pcCmd.Parameters.AddWithValue("@DeviceId",  id);
+                    await pcCmd.ExecuteNonQueryAsync();
+                }
+                else if (prefix == "ED")
+                {
+                    var edCmd = new SqlCommand(@"
+UPDATE Embedded
+   SET IpAddress   = @IP,
+       NetworkName = @Network
+ WHERE DeviceId = @DeviceId", conn, tran);
+                    edCmd.Parameters.AddWithValue("@IP",        d.IpAddress    ?? string.Empty);
+                    edCmd.Parameters.AddWithValue("@Network",   d.NetworkName  ?? string.Empty);
+                    edCmd.Parameters.AddWithValue("@DeviceId",  id);
+                    await edCmd.ExecuteNonQueryAsync();
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown type prefix '{prefix}'");
+                }
+
+                await tran.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await tran.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<bool> DeleteAsync(string id)
         {
-            const string sql = "DELETE FROM Device WHERE Id=@Id";
-
-            using var conn = new SqlConnection(_conn);
-            using var cmd  = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@Id", id);
-
+            await using var conn = new SqlConnection(_conn);
             await conn.OpenAsync();
-            return await cmd.ExecuteNonQueryAsync() > 0;
+            await using var tran = conn.BeginTransaction();
+            try
+            {
+                //remove subtype row first, so the constraint error is fixed
+                var prefix = id.Substring(0,2).ToUpperInvariant();
+                if (prefix == "SW")
+                    await new SqlCommand("DELETE FROM Smartwatch WHERE DeviceId = @DeviceId", conn, tran)
+                            { Parameters = { new SqlParameter("@DeviceId", id) } }
+                        .ExecuteNonQueryAsync();
+                else if (prefix == "P-")
+                    await new SqlCommand("DELETE FROM PersonalComputer WHERE DeviceId = @DeviceId", conn, tran)
+                            { Parameters = { new SqlParameter("@DeviceId", id) } }
+                        .ExecuteNonQueryAsync();
+                else if (prefix == "ED")
+                    await new SqlCommand("DELETE FROM Embedded WHERE DeviceId = @DeviceId", conn, tran)
+                            { Parameters = { new SqlParameter("@DeviceId", id) } }
+                        .ExecuteNonQueryAsync();
+                else
+                    throw new ArgumentException($"Unknown type prefix '{prefix}'");
+
+                //delete base Device, should be no sub device now 
+                var baseCmd = new SqlCommand("DELETE FROM Device WHERE Id = @Id", conn, tran);
+                baseCmd.Parameters.AddWithValue("@Id", id);
+                var rows = await baseCmd.ExecuteNonQueryAsync();
+
+                await tran.CommitAsync();
+                return rows > 0;
+            }
+            catch
+            {
+                await tran.RollbackAsync();
+                throw;
+            }
         }
     }
 }
