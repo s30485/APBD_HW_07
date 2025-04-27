@@ -1,5 +1,6 @@
 using APBD_HW_07.Business;
 using APBD_HW_07.Data;
+using APBD_HW_07.RestAPI.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,9 @@ builder.Services.AddScoped<IDeviceFileImporter, DeviceFileImporter>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+//the validator class
+builder.Services.AddScoped<IValidator<CreateUpdateDeviceDto>, CreateUpdateDeviceDtoValidator>();
 
 var app = builder.Build();
 app.UseSwagger();

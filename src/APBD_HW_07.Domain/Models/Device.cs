@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace APBD_HW_07.Domain
+namespace APBD_HW_07.Domain.Models
 {
     public abstract class Device
     {
