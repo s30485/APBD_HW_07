@@ -1,130 +1,89 @@
-﻿using System;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using APBD_HW_07.Business;
 using APBD_HW_07.Domain.Exceptions;
 using APBD_HW_07.RestAPI.Validators;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
 
-namespace APBD_HW_07.RestAPI.Controllers
+namespace APBD_HW_07.RestAPI.Controllers;
+
+[ApiController]
+[Route("api/devices")]
+public class DevicesController : ControllerBase
 {
-    [ApiController]
-    [Route("api/devices")]
-    public class DevicesController : ControllerBase
+    private readonly IDeviceService _svc;
+    private readonly IValidator<CreateUpdateDeviceDto> _validator;
+
+    public DevicesController(
+        IDeviceService svc,
+        IValidator<CreateUpdateDeviceDto> validator)
     {
-        private readonly IDeviceService _svc;
-        private readonly IValidator<CreateUpdateDeviceDto> _validator;
+        _svc = svc;
+        _validator = validator;
+    }
 
-        public DevicesController(
-            IDeviceService svc,
-            IValidator<CreateUpdateDeviceDto> validator)
+    [HttpGet]
+    public async Task<IResult> GetAll()
+    {
+        var list = await _svc.GetAllAsync();
+        return Results.Ok(list);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IResult> GetById(string id)
+    {
+        var dto = await _svc.GetByIdAsync(id);
+        return dto is null ? Results.NotFound() : Results.Ok(dto);
+    }
+
+    [HttpPost("{deviceType}")]
+    [Consumes("application/json")]
+    public async Task<IResult> CreateJson(string deviceType, [FromBody] CreateUpdateDeviceDto dto)
+    {
+        dto = dto with { Type = deviceType };
+
+        var (ok, errors) = _validator.Validate(dto);
+        if (!ok) return Results.BadRequest(new { errors });
+
+        try
         {
-            _svc = svc;
-            _validator = validator;
+            var created = await _svc.CreateFromJsonAsync(dto);
+            return Results.Created($"/api/devices/{created.Id}", created);
         }
-
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-            => Ok(await _svc.GetAllAsync());
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        catch (ArgumentException ae)
         {
-            var dto = await _svc.GetByIdAsync(id);
-            return dto == null ? NotFound() : Ok(dto);
+            return Results.BadRequest(ae.Message);
         }
-
-        [HttpPost("{deviceType}")]
-        [Consumes("application/json")]
-        public async Task<IActionResult> CreateJson(
-            string deviceType,
-            [FromBody] CreateUpdateDeviceDto dto)
+        catch (EmptyBatteryException ebe)
         {
-            // override Type from route
-            dto = dto with { Type = deviceType };
-
-            // 1) validate DTO + domain invariants
-            var (ok, errors) = _validator.Validate(dto);
-            if (!ok)
-                return BadRequest(new { errors });
-
-            // 2) create
-            try
-            {
-                var created = await _svc.CreateFromJsonAsync(dto);
-                return CreatedAtAction(
-                    nameof(GetById),
-                    new { id = created.Id },
-                    created);
-            }
-            catch (ArgumentException ae)
-            {
-                return BadRequest(ae.Message);
-            }
-            catch (EmptyBatteryException ebe)
-            {
-                return BadRequest(ebe.Message);
-            }
-            catch (EmptySystemException ese)
-            {
-                return BadRequest(ese.Message);
-            }
-            catch (ConnectionException ce)
-            {
-                return BadRequest(ce.Message);
-            }
+            return Results.BadRequest(ebe.Message);
         }
-
-        [HttpPost]
-        [Consumes("text/plain")]
-        public async Task<IActionResult> ImportPlainText([FromBody] string body)
+        catch (EmptySystemException ese)
         {
-            var created = new List<DeviceDto>();
-            using var reader = new StringReader(body);
-            string? line;
-            while ((line = await reader.ReadLineAsync()) != null)
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
-                try
-                {
-                    // Service parses, validates, and persists
-                    var dto = await _svc.CreateFromFileLineAsync(line);
-                    created.Add(dto);
-                }
-                catch
-                {
-                    // skip invalid lines
-                }
-            }
-            return Ok(created);
+            return Results.BadRequest(ese.Message);
         }
-
-        [HttpPut("{id}")]
-        [Consumes("application/json")]
-        public async Task<IActionResult> Update(
-            string id,
-            [FromBody] CreateUpdateDeviceDto dto)
+        catch (ConnectionException ce)
         {
-            // DTO‐level override
-            // Actually deviceType isn’t needed for update—ignored.
-
-            // 1) validate fields
-            var (ok, errors) = _validator.Validate(dto);
-            if (!ok)
-                return BadRequest(new { errors });
-
-            // 2) update
-            var updated = await _svc.UpdateAsync(id, dto);
-            return updated ? NoContent() : NotFound();
+            return Results.BadRequest(ce.Message);
         }
+    }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
-            => await _svc.DeleteAsync(id)
-                ? NoContent()
-                : NotFound();
+    [HttpPut("{id}")]
+    [Consumes("application/json")]
+    public async Task<IResult> Update(string id, [FromBody] CreateUpdateDeviceDto dto)
+    {
+        var (ok, errors) = _validator.Validate(dto);
+        if (!ok) return Results.BadRequest(new { errors });
+
+        var updated = await _svc.UpdateAsync(id, dto);
+        return updated ? Results.NoContent() : Results.Conflict("Update failed due to version conflict.");
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IResult> Delete(string id)
+    {
+        var deleted = await _svc.DeleteAsync(id);
+        return deleted ? Results.NoContent() : Results.NotFound();
     }
 }

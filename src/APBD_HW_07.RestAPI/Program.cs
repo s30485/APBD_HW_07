@@ -10,8 +10,9 @@ builder.Services.AddSingleton<IDeviceRepository>(sp =>
         builder.Configuration.GetConnectionString("DefaultConnection")!
     )
 );
-builder.Services.AddScoped<IDeviceService, DeviceService>();
-builder.Services.AddScoped<IDeviceFileImporter, DeviceFileImporter>();
+//registering dependencies
+builder.Services.AddScoped<IDeviceService, DeviceService>(); //when someone asks for IDeviceService then give him DeviceService
+//builder.Services.AddScoped<IDeviceFileImporter, DeviceFileImporter>();
 
 // Swagger
 builder.Services.AddControllers();

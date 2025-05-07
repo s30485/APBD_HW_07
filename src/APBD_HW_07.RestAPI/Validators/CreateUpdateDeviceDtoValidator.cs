@@ -8,7 +8,6 @@ namespace APBD_HW_07.RestAPI.Validators
 {
     /// <summary>
     /// Validates a CreateUpdateDeviceDto using DataAnnotations
-    /// and also enforces type-specific rules (SOLID’s OCP + SRP).
     /// </summary>
     public class CreateUpdateDeviceDtoValidator : IValidator<CreateUpdateDeviceDto>
     {

@@ -1,4 +1,10 @@
-﻿namespace APBD_HW_07.Business
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using APBD_HW_07.Domain.Models;
+
+namespace APBD_HW_07.Business
 {
     public class DeviceService : IDeviceService
     {
@@ -17,56 +23,56 @@
 
         public async Task<DeviceDto> CreateFromJsonAsync(CreateUpdateDeviceDto dto)
         {
-            //determine prefix and load all existing short IDs
             var prefix = dto.Type.ToUpperInvariant();
-            var all = await _repo.GetAllAsync(); //returns ShortDeviceDto with Id like "SW-1", "P-2", etc.
 
-            //extract integer suffixes for this prefix
+            //1. generate next ID based on existing IDs
+            var all = await _repo.GetAllAsync();
             var maxSuffix = all
                 .Select(d => d.Id)
                 .Where(id => id.StartsWith(prefix + "-"))
                 .Select(id =>
                 {
                     var parts = id.Split('-');
-                    return parts.Length == 2 && int.TryParse(parts[1], out var n) 
-                        ? n 
-                        : 0;
+                    return parts.Length == 2 && int.TryParse(parts[1], out var n) ? n : 0;
                 })
                 .DefaultIfEmpty(0)
                 .Max();
 
-            //assign next ID: e.g. "SW-3" if the max was 2
-            var nextSuffix = maxSuffix + 1;
-            var newId = $"{prefix}-{nextSuffix}";
+            var newId = $"{prefix}-{maxSuffix + 1}";
 
-            //build the full DTO
-            var d = new DeviceDto(
+            //2. make new DeviceDto
+            var device = new DeviceDto(
                 newId,
                 dto.Name,
                 dto.IsEnabled,
                 dto.BatteryPercentage,
                 dto.OperatingSystem,
                 dto.IpAddress,
-                dto.NetworkName
+                dto.NetworkName,
+                Array.Empty<byte>() // dummy RowVersion for creation; DB sets it based on the procedure
             );
 
-            //persist via ADO.NET
-            await _repo.CreateAsync(d);
+            //3. use repository (which uses stored procedure + transaction)
+            await _repo.CreateAsync(device);
 
-            //read it back and return
+            //4. return created (with real RowVersion)
             return (await _repo.GetByIdAsync(newId))!;
         }
 
-        public Task<bool> UpdateAsync(string id, CreateUpdateDeviceDto dto)
+        public async Task<bool> UpdateAsync(string id, CreateUpdateDeviceDto dto)
         {
-            var d = new DeviceDto(
-                id, dto.Name, dto.IsEnabled,
+            var device = new DeviceDto(
+                id,
+                dto.Name,
+                dto.IsEnabled,
                 dto.BatteryPercentage,
                 dto.OperatingSystem,
                 dto.IpAddress,
-                dto.NetworkName
+                dto.NetworkName,
+                dto.RowVersion //needed for optimistic locking
             );
-            return _repo.UpdateAsync(id, d);
+
+            return await _repo.UpdateAsync(id, device);
         }
 
         public Task<bool> DeleteAsync(string id)
@@ -87,20 +93,38 @@
                      : rawId.StartsWith("ED-") ? "ED"
                      : throw new ArgumentException($"Unknown prefix in ID '{rawId}'.");
 
-            int isEnabled = int.Parse(parts[2]);
+            var name = parts[1].Trim();
+            var isEnabled = int.Parse(parts[2]);
+
             DeviceDto dto = type switch
             {
-                "SW" => new DeviceDto(rawId, parts[1], isEnabled,
-                                     int.Parse(parts[3].TrimEnd('%')),
-                                     null, null, null),
-                "P"  => new DeviceDto(rawId, parts[1], isEnabled,
-                                     null,
-                                     parts.Length > 3 ? parts[3] : string.Empty,
-                                     null, null),
-                "ED" => new DeviceDto(rawId, parts[1], isEnabled,
-                                     null, null,
-                                     parts[2], parts[3]),
-                _    => throw new ArgumentException("Unreachable")
+                "SW" => new DeviceDto(
+                            rawId,
+                            name,
+                            isEnabled,
+                            int.Parse(parts[3].TrimEnd('%')),
+                            null, null, null,
+                            Array.Empty<byte>()
+                        ),
+                "P" => new DeviceDto(
+                           rawId,
+                           name,
+                           isEnabled,
+                           null,
+                           parts.Length > 3 ? parts[3].Trim() : string.Empty,
+                           null, null,
+                           Array.Empty<byte>()
+                       ),
+                "ED" => new DeviceDto(
+                            rawId,
+                            name,
+                            isEnabled,
+                            null, null,
+                            parts.Length > 3 ? parts[3].Trim() : string.Empty,
+                            parts.Length > 4 ? parts[4].Trim() : string.Empty,
+                            Array.Empty<byte>()
+                        ),
+                _ => throw new ArgumentException("Unreachable device type.")
             };
 
             await _repo.CreateAsync(dto);
