@@ -21,6 +21,6 @@
         string? OperatingSystem,
         string? IpAddress,
         string? NetworkName,
-        byte[] RowVersion //here cant be nullable, used for updating
+        byte[]? RowVersion //here cant be nullable, used for updating, but also for creating it needs to be null xd
     );
 }

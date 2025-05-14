@@ -32,11 +32,11 @@ namespace APBD_HW_07.RestAPI.Controllers
             IDeviceCommandHandler<DeleteDeviceCommand> delete,
             IValidator<CreateUpdateDeviceDto> validator)
         {
-            _getAll    = getAll;
-            _getById   = getById;
-            _create    = create;
-            _update    = update;
-            _delete    = delete;
+            _getAll = getAll;
+            _getById = getById;
+            _create = create;
+            _update = update;
+            _delete = delete;
             _validator = validator;
         }
 
@@ -57,19 +57,45 @@ namespace APBD_HW_07.RestAPI.Controllers
         {
             dto = dto with { Type = deviceType };
             var (ok, errs) = _validator.Validate(dto);
-            if (!ok) return Results.BadRequest(new { errs });
+            if (!ok) 
+                return Results.BadRequest(new { errs });
 
-            var id = $"{dto.Type}-{Guid.NewGuid():N}".Substring(0, 8);
+            //load only the ids that match the prefix
+            var all = await _getAll.HandleAsync(new GetAllDevicesQuery());
+            var matches = all
+                .Select(d => d.Id)
+                .Where(id => id.StartsWith($"{dto.Type}-", StringComparison.OrdinalIgnoreCase));
+
+            //pull out the numeric part of id
+            var max = matches
+                .Select(id =>
+                {
+                    var parts = id.Split('-', 2);
+                    return parts.Length == 2 && int.TryParse(parts[1], out var n) ? n : 0;
+                })
+                .DefaultIfEmpty(0)
+                .Max();
+
+            //increment
+            var next = max + 1;
+
+            //combine
+            var newId = $"{dto.Type}-{next}"; //imo a good option would be to make a seperate class that does this studd to follow SOLID better, but this works and i dont have much time.
+            
             var device = new DeviceDto(
-                id, dto.Name, dto.IsEnabled,
-                dto.BatteryPercentage, dto.OperatingSystem,
-                dto.IpAddress, dto.NetworkName,
-                Array.Empty<byte>());
+                newId, 
+                dto.Name, 
+                dto.IsEnabled,
+                dto.BatteryPercentage, 
+                dto.OperatingSystem,
+                dto.IpAddress, 
+                dto.NetworkName,
+                null);
 
             try
             {
                 await _create.HandleAsync(new CreateDeviceCommand(device));
-                return Results.Created($"/api/devices/{id}", device);
+                return Results.Created($"/api/devices/{newId}", device);
             }
             catch (Exception ex) when (ex is ArgumentException ||
                                        ex is EmptyBatteryException ||
