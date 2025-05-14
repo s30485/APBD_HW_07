@@ -1,1 +1,1 @@
-﻿ALTER TABLE Device ADD RowVersion ROWVERSION;
+﻿ALTER TABLE Device ADD RowVersion ROWVERSION; --adding the rowversion
