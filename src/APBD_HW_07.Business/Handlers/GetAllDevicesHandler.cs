@@ -1,16 +1,17 @@
-﻿namespace APBD_HW_07.Data;
+﻿using System.Collections.Generic;
+using APBD_HW_07.Business.Interfaces;
+using APBD_HW_07.Business.Queries;
+using APBD_HW_07.Domain.Models;
 
-public class GetAllDevicesHandler : IDeviceQueryHandler<GetAllDevicesQuery, IEnumerable<ShortDeviceDto>>
+namespace APBD_HW_07.Business.Handlers
 {
-    private readonly IDeviceRepository _repo;
-
-    public GetAllDevicesHandler(IDeviceRepository repo)
+    public class GetAllDevicesHandler 
+        : IDeviceQueryHandler<GetAllDevicesQuery, IEnumerable<ShortDeviceDto>>
     {
-        _repo = repo;
-    }
+        private readonly IDeviceRepository _repo;
+        public GetAllDevicesHandler(IDeviceRepository repo) => _repo = repo;
 
-    public Task<IEnumerable<ShortDeviceDto>> HandleAsync(GetAllDevicesQuery query)
-    {
-        return _repo.GetAllAsync();
+        public Task<IEnumerable<ShortDeviceDto>> HandleAsync(GetAllDevicesQuery _)
+            => _repo.GetAllAsync();
     }
 }

@@ -1,16 +1,16 @@
-﻿namespace APBD_HW_07.Data;
+﻿using APBD_HW_07.Business.Interfaces;
+using APBD_HW_07.Business.Queries;
+using APBD_HW_07.Domain.Models;
 
-public class GetDeviceByIdHandler : IDeviceQueryHandler<GetDeviceByIdQuery, DeviceDto?>
+namespace APBD_HW_07.Business.Handlers
 {
-    private readonly IDeviceRepository _repo;
-
-    public GetDeviceByIdHandler(IDeviceRepository repo)
+    public class GetDeviceByIdHandler 
+        : IDeviceQueryHandler<GetDeviceByIdQuery, DeviceDto?>
     {
-        _repo = repo;
-    }
+        private readonly IDeviceRepository _repo;
+        public GetDeviceByIdHandler(IDeviceRepository repo) => _repo = repo;
 
-    public Task<DeviceDto?> HandleAsync(GetDeviceByIdQuery query)
-    {
-        return _repo.GetByIdAsync(query.Id);
+        public Task<DeviceDto?> HandleAsync(GetDeviceByIdQuery query)
+            => _repo.GetByIdAsync(query.Id);
     }
 }

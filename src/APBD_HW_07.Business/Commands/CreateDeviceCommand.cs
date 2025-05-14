@@ -1,3 +1,4 @@
-﻿namespace APBD_HW_07.Data;
-
-public record CreateDeviceCommand(DeviceDto Device);
+﻿namespace APBD_HW_07.Business.Commands
+{
+    public record CreateDeviceCommand(DeviceDto Device);
+}

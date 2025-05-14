@@ -1,3 +1,4 @@
-﻿namespace APBD_HW_07.Data;
-
-public record UpdateDeviceCommand(string Id, DeviceDto Device);
+﻿namespace APBD_HW_07.Business.Commands
+{
+    public record UpdateDeviceCommand(string Id, DeviceDto Device);
+}

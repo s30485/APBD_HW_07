@@ -1,18 +1,18 @@
-﻿namespace APBD_HW_07.Data;
+﻿using System;
+using APBD_HW_07.Business.Commands;
+using APBD_HW_07.Business.Interfaces;
 
-public class UpdateDeviceHandler : IDeviceCommandHandler<UpdateDeviceCommand>
+namespace APBD_HW_07.Business.Handlers
 {
-    private readonly IDeviceRepository _repo;
-
-    public UpdateDeviceHandler(IDeviceRepository repo)
+    public class UpdateDeviceHandler : IDeviceCommandHandler<UpdateDeviceCommand>
     {
-        _repo = repo;
-    }
+        private readonly IDeviceRepository _repo;
+        public UpdateDeviceHandler(IDeviceRepository repo) => _repo = repo;
 
-    public async Task HandleAsync(UpdateDeviceCommand command)
-    {
-        var updated = await _repo.UpdateAsync(command.Id, command.Device);
-        if (!updated)
-            throw new InvalidOperationException("Update failed due to version conflict or invalid ID.");
+        public async Task HandleAsync(UpdateDeviceCommand command)
+        {
+            var ok = await _repo.UpdateAsync(command.Id, command.Device);
+            if (!ok) throw new InvalidOperationException("Invalid version conflict");
+        }
     }
 }

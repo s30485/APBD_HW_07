@@ -1,67 +1,41 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using APBD_HW_07.Business;
-using APBD_HW_07.Domain.Models;
 using APBD_HW_07.Domain.Exceptions;
+using APBD_HW_07.Domain.Models;
 
 namespace APBD_HW_07.RestAPI.Validators
 {
-    /// <summary>
-    /// Validates a CreateUpdateDeviceDto using DataAnnotations
-    /// </summary>
     public class CreateUpdateDeviceDtoValidator : IValidator<CreateUpdateDeviceDto>
     {
-        private static readonly HashSet<string> AllowedTypes = new()
-            { "SW", "P", "ED" };
+        private static readonly HashSet<string> Allowed = new() { "SW","P","ED" };
 
-        public (bool IsValid, IEnumerable<string> Errors) Validate(CreateUpdateDeviceDto dto)
+        public (bool, IEnumerable<string>) Validate(CreateUpdateDeviceDto dto)
         {
             var results = new List<ValidationResult>();
-            var ctx = new ValidationContext(dto, null, null);
+            var ctx = new ValidationContext(dto);
+            Validator.TryValidateObject(dto, ctx, results, true);
 
-            //dataAnnotations check
-            Validator.TryValidateObject(dto, ctx, results, validateAllProperties: true);
+            if (!Allowed.Contains(dto.Type.ToUpperInvariant()))
+                results.Add(new ValidationResult($"Type must be SW, P or ED", new[]{nameof(dto.Type)}));
 
-            //type must be one of SW, P, ED
-            if (!AllowedTypes.Contains(dto.Type?.ToUpperInvariant() ?? ""))
-            {
-                results.Add(new ValidationResult(
-                    $"Type must be one of: {string.Join(", ", AllowedTypes)}",
-                    new[] { nameof(dto.Type) }));
-            }
-
-            //domain‐level sanity check
-            //construct a dummy domain object to catch its exceptions:
             try
             {
                 Device dummy = dto.Type switch
                 {
                     "SW" => new Smartwatch { BatteryPercentage = dto.BatteryPercentage ?? 0 },
-                    "P"  => new PersonalComputer { OperatingSystem = dto.OperatingSystem ?? "" },
-                    "ED" => new EmbeddedDevice 
-                            { IpAddress = dto.IpAddress ?? "", 
-                              NetworkName = dto.NetworkName ?? "" },
+                    "P"  => new PersonalComputer { OperatingSystem = dto.OperatingSystem! },
+                    "ED" => new EmbeddedDevice { IpAddress = dto.IpAddress!, NetworkName = dto.NetworkName! },
                     _    => null
                 };
             }
-            catch (ArgumentException ae)
+            catch (Exception ex) when (
+                ex is ArgumentException or EmptyBatteryException or EmptySystemException or ConnectionException)
             {
-                results.Add(new ValidationResult(ae.Message, new[] { nameof(dto) }));
-            }
-            catch (EmptyBatteryException ebe)
-            {
-                results.Add(new ValidationResult(ebe.Message, new[] { nameof(dto.BatteryPercentage) }));
-            }
-            catch (EmptySystemException ese)
-            {
-                results.Add(new ValidationResult(ese.Message, new[] { nameof(dto.OperatingSystem) }));
-            }
-            catch (ConnectionException ce)
-            {
-                results.Add(new ValidationResult(ce.Message, new[] { nameof(dto.NetworkName) }));
+                results.Add(new ValidationResult(ex.Message));
             }
 
-            return (results.Count == 0, results.ConvertAll(r => r.ErrorMessage!));
+            return (results.Count==0, results.ConvertAll(r=>r.ErrorMessage!));
         }
     }
 }

@@ -1,3 +1,4 @@
-﻿namespace APBD_HW_07.Data;
-
-public record GetAllDevicesQuery;
+﻿namespace APBD_HW_07.Business.Queries
+{
+    public record GetAllDevicesQuery;
+}

@@ -1,6 +1,7 @@
-﻿namespace APBD_HW_07.Data;
-
-public interface IDeviceCommandHandler<TCommand>
+﻿namespace APBD_HW_07.Business.Interfaces
 {
-    Task HandleAsync(TCommand command);
+    public interface IDeviceCommandHandler<in TCommand>
+    {
+        Task HandleAsync(TCommand command);
+    }
 }

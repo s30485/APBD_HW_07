@@ -1,16 +1,14 @@
-﻿namespace APBD_HW_07.Data;
+﻿using APBD_HW_07.Business.Commands;
+using APBD_HW_07.Business.Interfaces;
 
-public class CreateDeviceHandler : IDeviceCommandHandler<CreateDeviceCommand>
+namespace APBD_HW_07.Business.Handlers
 {
-    private readonly IDeviceRepository _repo;
-
-    public CreateDeviceHandler(IDeviceRepository repo)
+    public class CreateDeviceHandler : IDeviceCommandHandler<CreateDeviceCommand>
     {
-        _repo = repo;
-    }
+        private readonly IDeviceRepository _repo;
+        public CreateDeviceHandler(IDeviceRepository repo) => _repo = repo;
 
-    public async Task HandleAsync(CreateDeviceCommand command)
-    {
-        await _repo.CreateAsync(command.Device);
+        public Task HandleAsync(CreateDeviceCommand command)
+            => _repo.CreateAsync(command.Device);
     }
 }

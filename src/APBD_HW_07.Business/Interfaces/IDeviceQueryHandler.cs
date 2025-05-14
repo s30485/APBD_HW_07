@@ -1,6 +1,7 @@
-﻿namespace APBD_HW_07.Data;
-
-public interface IDeviceQueryHandler<TQuery, TResult>
+﻿namespace APBD_HW_07.Business.Interfaces
 {
-    Task<TResult> HandleAsync(TQuery query);
+    public interface IDeviceQueryHandler<in TQuery, TResult>
+    {
+        Task<TResult> HandleAsync(TQuery query);
+    }
 }
