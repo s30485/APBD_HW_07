@@ -1,4 +1,4 @@
-﻿namespace APBD_HW_07.Business
+﻿namespace APBD_HW_07.Business.Interfaces
 {
     public interface IDeviceService
     {

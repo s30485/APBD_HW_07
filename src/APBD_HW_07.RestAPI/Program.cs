@@ -1,4 +1,5 @@
 using APBD_HW_07.Business;
+using APBD_HW_07.Business.Interfaces;
 using APBD_HW_07.Data;
 using APBD_HW_07.RestAPI.Validators;
 
@@ -12,7 +13,7 @@ builder.Services.AddSingleton<IDeviceRepository>(sp =>
 );
 //registering dependencies
 builder.Services.AddScoped<IDeviceService, DeviceService>(); //when someone asks for IDeviceService then give him DeviceService
-//builder.Services.AddScoped<IDeviceFileImporter, DeviceFileImporter>();
+//builder.Services.AddScoped<IDeviceFileImporter, DeviceFileImporter>(); //not needed tbh
 
 // Swagger
 builder.Services.AddControllers();

@@ -11,7 +11,7 @@
         string? OperatingSystem,
         string? IpAddress,
         string? NetworkName,
-        byte[]? RowVersion //can be nullable when making a device 
+        byte[]? RowVersion //can be nullable when making a device, i use it for locking only
     );
     public record CreateUpdateDeviceDto(
         string Type,

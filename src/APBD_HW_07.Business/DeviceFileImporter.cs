@@ -1,4 +1,6 @@
-﻿namespace APBD_HW_07.Business
+﻿using APBD_HW_07.Business.Interfaces;
+
+namespace APBD_HW_07.Business
 {
     public class DeviceFileImporter : IDeviceFileImporter
     {

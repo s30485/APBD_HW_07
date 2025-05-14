@@ -37,21 +37,11 @@ namespace APBD_HW_07.Data
 
         public async Task<DeviceDto?> GetByIdAsync(string id)
         {
-            const string sql = @"
-SELECT
-  d.Id,
-  d.Name,
-  d.IsEnabled,
-  sw.BatteryPercentage,
-  pc.OperationSystem,
-  ed.IpAddress,
-  ed.NetworkName,
-  d.RowVersion
-FROM Device AS d
-LEFT JOIN Smartwatch        AS sw ON sw.DeviceId = d.Id
-LEFT JOIN PersonalComputer AS pc ON pc.DeviceId = d.Id
-LEFT JOIN Embedded         AS ed ON ed.DeviceId = d.Id
-WHERE d.Id = @Id";
+            const string sql = @"SELECT d.Id, d.Name, d.IsEnabled, sw.BatteryPercentage, pc.OperationSystem, ed.IpAddress, ed.NetworkName, d.RowVersion FROM Device AS d
+                                    LEFT JOIN Smartwatch AS sw ON sw.DeviceId = d.Id
+                                    LEFT JOIN PersonalComputer AS pc ON pc.DeviceId = d.Id
+                                    LEFT JOIN Embedded AS ed ON ed.DeviceId = d.Id
+                                    WHERE d.Id = @Id";
 
             using var conn = new SqlConnection(_conn);
             using var cmd = new SqlCommand(sql, conn);
@@ -69,7 +59,7 @@ WHERE d.Id = @Id";
                 rdr.IsDBNull(4) ? null : rdr.GetString(4),
                 rdr.IsDBNull(5) ? null : rdr.GetString(5),
                 rdr.IsDBNull(6) ? null : rdr.GetString(6),
-                rdr.GetFieldValue<byte[]>(7) // RowVersion
+                rdr.GetFieldValue<byte[]>(7) // rowVersion
             );
         }
 
@@ -102,12 +92,7 @@ WHERE d.Id = @Id";
             await using var tran = conn.BeginTransaction();
             try
             {
-                var baseCmd = new SqlCommand(@"
-UPDATE Device
-   SET Name = @Name,
-       IsEnabled = @IsEnabled
- WHERE Id = @Id AND RowVersion = @RowVersion;
-SELECT @@ROWCOUNT;", conn, tran);
+                var baseCmd = new SqlCommand(@"UPDATE Device SET Name = @Name, IsEnabled = @IsEnabled WHERE Id = @Id AND RowVersion = @RowVersion; SELECT @@ROWCOUNT;", conn, tran);
 
                 baseCmd.Parameters.AddWithValue("@Id", id);
                 baseCmd.Parameters.AddWithValue("@Name", d.Name);
@@ -118,37 +103,27 @@ SELECT @@ROWCOUNT;", conn, tran);
                 if (rows == 0)
                 {
                     await tran.RollbackAsync();
-                    return false; // Conflict
+                    return false; //conflict
                 }
 
                 var prefix = id.Substring(0, 2).ToUpperInvariant();
                 if (prefix == "SW")
                 {
-                    var swCmd = new SqlCommand(@"
-UPDATE Smartwatch
-   SET BatteryPercentage = @Battery
- WHERE DeviceId = @DeviceId", conn, tran);
+                    var swCmd = new SqlCommand(@"UPDATE Smartwatch SET BatteryPercentage = @Battery WHERE DeviceId = @DeviceId", conn, tran);
                     swCmd.Parameters.AddWithValue("@Battery", d.BatteryPercentage ?? 0);
                     swCmd.Parameters.AddWithValue("@DeviceId", id);
                     await swCmd.ExecuteNonQueryAsync();
                 }
                 else if (prefix == "P-")
                 {
-                    var pcCmd = new SqlCommand(@"
-UPDATE PersonalComputer
-   SET OperationSystem = @OS
- WHERE DeviceId = @DeviceId", conn, tran);
+                    var pcCmd = new SqlCommand(@"UPDATE PersonalComputer SET OperationSystem = @OS WHERE DeviceId = @DeviceId", conn, tran);
                     pcCmd.Parameters.AddWithValue("@OS", d.OperatingSystem ?? string.Empty);
                     pcCmd.Parameters.AddWithValue("@DeviceId", id);
                     await pcCmd.ExecuteNonQueryAsync();
                 }
                 else if (prefix == "ED")
                 {
-                    var edCmd = new SqlCommand(@"
-UPDATE Embedded
-   SET IpAddress = @IP,
-       NetworkName = @Network
- WHERE DeviceId = @DeviceId", conn, tran);
+                    var edCmd = new SqlCommand(@"UPDATE Embedded SET IpAddress = @IP, NetworkName = @Network WHERE DeviceId = @DeviceId", conn, tran);
                     edCmd.Parameters.AddWithValue("@IP", d.IpAddress ?? string.Empty);
                     edCmd.Parameters.AddWithValue("@Network", d.NetworkName ?? string.Empty);
                     edCmd.Parameters.AddWithValue("@DeviceId", id);
