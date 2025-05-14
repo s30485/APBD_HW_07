@@ -14,6 +14,13 @@ builder.Services.AddSingleton<IDeviceRepository>(sp =>
 //registering dependencies
 builder.Services.AddScoped<IDeviceService, DeviceService>(); //when someone asks for IDeviceService then give him DeviceService
 //builder.Services.AddScoped<IDeviceFileImporter, DeviceFileImporter>(); //not needed tbh
+//to support SOLID:
+builder.Services.AddScoped<IDeviceQueryHandler<GetAllDevicesQuery, IEnumerable<ShortDeviceDto>>, GetAllDevicesHandler>();
+builder.Services.AddScoped<IDeviceQueryHandler<GetDeviceByIdQuery, DeviceDto?>, GetDeviceByIdHandler>();
+builder.Services.AddScoped<IDeviceCommandHandler<CreateDeviceCommand>, CreateDeviceHandler>();
+builder.Services.AddScoped<IDeviceCommandHandler<UpdateDeviceCommand>, UpdateDeviceHandler>();
+builder.Services.AddScoped<IDeviceCommandHandler<DeleteDeviceCommand>, DeleteDeviceHandler>();
+
 
 // Swagger
 builder.Services.AddControllers();

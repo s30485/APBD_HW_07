@@ -21,6 +21,6 @@
         string? OperatingSystem,
         string? IpAddress,
         string? NetworkName,
-        byte[]? RowVersion
+        byte[] RowVersion //here cant be nullable, used for updating
     );
 }
